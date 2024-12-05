@@ -5,6 +5,7 @@ use std::{
 };
 
 use clap::Parser;
+use regex::Regex;
 use scan_rules::{
     scan, scan_rules_impl,
     scanner::{max_width, min_width, scan_a, Everything},
@@ -23,18 +24,24 @@ fn main() {
     BufReader::new(input).read_to_string(&mut memory).unwrap();
 
     let mut sum = 0;
-    for chunk in memory.split("m") {
-        let _ = scan! { chunk;
+    let mut enabled = true;
+    for chunk in Regex::new(r#"((mul\(\d{1,3},\d{1,3}\))|(do(n't)?\(\)))"#).unwrap().find_iter(&memory) {
+        println!("{}", chunk.as_str());
+        let _ = scan! { chunk.as_str();
             (
-                "ul(",
+                "mul(",
                 let a <| min_width(1, max_width(3, scan_a::<isize>())),
                 ",",
                 let b <| min_width(1, max_width(3, scan_a::<isize>())),
                 ")",
                 .. _
             ) => {
-                sum += a * b;
-            }
+                if enabled {
+                    sum += a * b;
+                }
+            },
+            ("do()") => enabled = true,
+            ("don't()") => enabled = false,
         };
     }
     println!("{sum}");
